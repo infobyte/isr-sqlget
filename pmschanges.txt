@@ -1,0 +1,38 @@
+LWP/Protocol/http.pm
+#####################
+Comentado method verification
+line 128 al 132
+
+--
+    my $req_buf = $socket->format_request($method, $fullpath,$self->{'ua'}->{'space_type'}, @h);
+
+LWP/UserAgent.pm
+###############
+new method
+    my $space_type = delete $cnf{space_type};
+
+--
+    my $self = bless {
+    space_type => $space_type,
+
+format_request
+
+Net/HTTP/Methods.pm
+################
+sub format_request {
+    my $self = shift;
+    my $method = shift;
+    my $uri = shift;
+    my $space_type =shift;
+	
+    my $content = (@_ % 2) ? pop : "";
+    #    for ($method, $uri) {
+    #       require Carp;
+    #       Carp::croak("Bad method or uri") if /\s/ || !length;
+    #    }
+		    
+
+    my @spacer = split(/,/,$space_type);
+    return join($CRLF, "$method$spacer[0]$uri$spacer[1]HTTP/$ver", @h2, @h, "", $content);
+	    
+--

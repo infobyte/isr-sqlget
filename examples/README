@@ -1,0 +1,2 @@
+cp example[n].pm ../
+perl ISR-sqlget.pl -c -n example[n] -p examples/example[n].html

@@ -1,0 +1,13 @@
+- License
+- support dbs
+ xbase, (no trial)
+ ianywhere, (it does't have the right permission to see system tables)
+ frontbase, (it does't support specify columns in information_schema.columns)
+ msaccess, (it does't support list system column name)
+ gladius db v0.6.3, (it does't support select union)
+ msql 3.8 (it does't support list system tables/columns);
+ javadb/derby 10.2.2.0   
+ 
+- Database download resume..
+- Improbe cast functions.
+- Verbose mode

